@@ -1,0 +1,36 @@
+a.arrow:link {
+    text-decoration: none;
+    color: black;
+}
+a.arrow:visited {
+    text-decoration: none;
+    color: black;
+}
+thead > tr.toprow{
+    border-top-color: white;
+    border-right-color: white;
+    border-left-color: white;
+}
+tbody > tr > td {
+    width: 14.3%;
+    height: max-content;
+}
+@media print {
+   
+    tbody > tr > td {
+        width: 200px;
+        height: 124px;
+        position: relative; 
+    }
+    
+    tbody > tr > td > span {
+        position: absolute; 
+        right: 0;
+        top: 0;
+    }
+
+   #arrow-left { display: none !important; }
+   #arrow-right { display: none !important; }
+   footer { display: none !important; }
+   
+}
