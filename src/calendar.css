@@ -17,25 +17,25 @@ tbody > tr > td {
     width: 14.3%;
     height: max-content;
 }
+
 @media print {
-    
 
     tbody > tr > td {
         width: 200px;
         height: 124px;
         position: relative; 
     }
-    
-    tbody > tr > td > span {
-        position: absolute; 
-        right: 0;
-        top: 0;
-    }
 
     div.tbody-flex > div.tr-flex > div.td-flex {
         width: 200px;
         height: 124px;
         position: relative; 
+    }
+
+    tbody > tr > td > span {
+        position: absolute; 
+        right: 0;
+        top: 0;
     }
     
     div.tbody-flex > div.tr-flex > div.td-flex > span {
@@ -58,9 +58,11 @@ tbody > tr > td {
 }
 
 .thead-flex {
+    display: flex;
     width: 100%;
-    flex-flow: row nowrap;
+    flex-flow: column nowrap;
     font-weight: 700;
+    flex: 1 1 0;
     background-color: white;
 }
 
@@ -70,9 +72,8 @@ div.thead-flex > div.tr-flex.toprow {
   
 .th-flex {
     display: flex;
-    flex-flow: column;
-    flex-grow: 1;
-    flex-basis: 0;
+    flex-direction: column;
+    flex: 1 1 0;
     padding: 0.5em;
     min-width: 0px;
 }
@@ -85,7 +86,8 @@ div.thead-flex > div.tr-flex.toprow {
 .tr-flex {
     width: 100%;
     display: flex;
-    flex-flow: row;
+    flex-direction: row;
+    flex: 1 1 0;
 }
 
 div.tbody-flex > div.tr-flex:nth-child(odd){
@@ -99,13 +101,8 @@ div.tbody-flex > div.tr-flex:nth-child(even) {
 .td-flex {
     display: flex;
     flex-flow: column nowrap;
-    flex-grow: 1;
-    flex-basis: 0;
+    flex: 1 1 0;
     padding: 0.5em;
-    word-break: break-word;
-    overflow: hidden;
-    text-overflow: ellipsis;
     min-width: 0px;
-    white-space: nowrap;
     border-bottom: 1px solid #d0d0d0;
 }
