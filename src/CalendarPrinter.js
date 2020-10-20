@@ -9,6 +9,7 @@ class CalendarPrinter extends HTMLElement {
     dayNames;
     searchParams;
     allowedParams;
+    displayMode;
 
     constructor() {
         super();
@@ -18,7 +19,8 @@ class CalendarPrinter extends HTMLElement {
         this.localeDateFormat = "long";
         this.searchParams = new URLSearchParams(window.location.search);
         this.localer = new Localer(this.locale, this.localeDateFormat);
-        this.allowedParams = ["m","loc"];
+        this.allowedParams = ["m","loc","dsp"];
+        this.displayMode = "flex"; //or table
     }
 
     connectedCallback() {
@@ -34,6 +36,10 @@ class CalendarPrinter extends HTMLElement {
         if (loc !== null && (loc !== this.locale)) {
             this.locale = this.localer.localeResolver(loc);
             this.localer.refresh(this.locale);
+        }
+        const dsp = this.searchParams.get('dsp');
+        if (dsp !== null && (dsp !== this.displayMode)) {
+            this.displayMode = dsp;
         }
         this.dayNames = this.localer.dayNames;
         this.render();
@@ -52,19 +58,20 @@ class CalendarPrinter extends HTMLElement {
         const lastDateOfCalendarDate = new Date(calendarYear, calendarMonth + 1, 0).getDate();
 
         //table
-        var calTable = document.createElement("table");
+        var calTable = this.createTableElement("table");
         calTable.id = "calendarTable";
-        calTable.className = "table table-striped table-responsive table-bordered";
+        calTable.className += " table table-striped table-responsive";
 
         //thead
-        var tHead = document.createElement("thead");
-        tHead.className = "thead-default text-center";
+        var tHead = this.createTableElement("thead");
+        tHead.className += " thead-default text-center";
 
         //top row, month and nav arrows
-        var tr = document.createElement("tr");
-        tr.className = "toprow";
+        var tr = this.createTableElement("tr");
+        tr.className += " toprow";
         //previous arrow cell
         var td = this.colspanTemplate(["th","1"]);
+        td.className += " text-left"
         var previousMonth = displayCalendarMonth - 1;
         var dateLink = previousMonth + "/" + calendarYear;
         var aDateLink = this.arrowTemplate([dateLink, "left", this.svgArrowLeftCircle()]);
@@ -81,6 +88,7 @@ class CalendarPrinter extends HTMLElement {
 
         //next arrow cell
         td = this.colspanTemplate(["th","1"]);
+        td.className += " text-right"
         var nextMonth = displayCalendarMonth + 1;
         dateLink = nextMonth + "/" + calendarYear;
         aDateLink = this.arrowTemplate([dateLink, "right", this.svgArrowRightCircle()]);
@@ -91,10 +99,10 @@ class CalendarPrinter extends HTMLElement {
         //top row closed
 
         //days of week row
-        tr = document.createElement("tr");
-        tr.className = "daynames";
+        tr = this.createTableElement("tr");
+        tr.className += " daynames";
         this.dayNames.forEach(dayName => {
-            let th = document.createElement("th");
+            let th = this.createTableElement("th");
             let text = document.createTextNode(dayName);
             th.appendChild(text);
             tr.appendChild(th);
@@ -109,16 +117,16 @@ class CalendarPrinter extends HTMLElement {
         var dayOfWeek = this.localer.localeDayOfWeek(calendarDate);
         
         //tBody
-        var tBody = document.createElement("tbody");
-        tBody.className = "text-right";
+        var tBody = this.createTableElement("tbody");
+        tBody.className += " text-right";
         //open the row
-        tr = document.createElement("tr");
+        tr = this.createTableElement("tr");
 
         //how many non-date td to print
         //print the cells not part of the month 
         //but part of the first week
         for (let i = 0; i < dayOfWeek; i++) {
-            td = document.createElement("td");
+            td = this.createTableElement("td");
             tr.appendChild(td);
         }
 
@@ -128,7 +136,7 @@ class CalendarPrinter extends HTMLElement {
             if (dayOfWeek > 6) {
                 tBody.appendChild(tr);
                 dayOfWeek = 0;
-                tr = document.createElement("tr");
+                tr = this.createTableElement("tr");
             }
 
             //the td(s) with the number
@@ -145,7 +153,7 @@ class CalendarPrinter extends HTMLElement {
             if (dateOfMonth == lastDateOfCalendarDate) {
                 let tdPad = 6 - dayOfWeek;
                 for (let t = 0; t < tdPad; t++) {
-                    td = document.createElement("td");
+                    td = this.createTableElement("td");
                     tr.appendChild(td);
                 }
             }
@@ -157,6 +165,17 @@ class CalendarPrinter extends HTMLElement {
         calTable.appendChild(tBody);
 
         return calTable;
+    }
+
+    createTableElement(tablePart){
+        let elem;
+        if(this.displayMode === "table"){
+            elem = document.createElement(tablePart);
+        } else {
+            elem = document.createElement("div");
+            elem.className = tablePart + "-" + this.displayMode;
+        }
+        return elem;
     }
 
 
@@ -223,14 +242,18 @@ class CalendarPrinter extends HTMLElement {
 
     colspanTemplate(args) {
         //template = "<{0} colspan=\"{1}\" >";
-        let elem = document.createElement(args[0]);
-        elem.setAttribute("colspan", args[1]);
+        let elem = this.createTableElement(args[0]);
+        if(this.displayMode === "table"){
+            elem.setAttribute("colspan", args[1]);
+        } else {
+
+        }
         return elem;
     }
 
     tdIdTemplate(args) {
         // template = "<td id=\"date{0}\">";
-        var td = document.createElement("td");
+        var td = this.createTableElement("td");
         td.id = "date_".concat(args[0]);
         return td;
     }
