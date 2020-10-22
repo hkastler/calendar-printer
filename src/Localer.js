@@ -15,8 +15,9 @@ class Localer {
         this.dayNames = this.getDayNames();
     }
 
-    refresh(pLoc){
+    refresh(pLoc, pLdf) {
         this.locale = pLoc;
+        this.localeDateFormat = pLdf;
         this.firstDay = this.getFirstDayForLocale();
         this.dayNames = this.getDayNames();
     }
@@ -70,7 +71,7 @@ class Localer {
         return this.generateDayNames(this.localeResolver(this.locale), this.localeDateFormat);
     }
 
-    localeResolver(localeToResolve){
+    localeResolver(localeToResolve) {
         let lLocale = localeToResolve;
         if (lLocale.length == 2) {
             lLocale = this.expandedLocaleSearch(lLocale);
@@ -90,28 +91,49 @@ class Localer {
     expandedLocaleSearch(localeToSearch) {
         var langCode = "en";
         let lLocale = localeToSearch;
-        var langData = languageData.supplemental.languageData;
-        for (let lang in langData) {
-            const item = langData[lang];
-            const territories = Object.keys(item).filter(key => { return key === '_territories' });
-            territories.forEach((code) => {
-                for (let t in item[code]) {
-                    let lCode = item[code][t];
-                    if (lLocale === lCode) {
-                        if (lang.length == 2) {
-                            langCode = lang;
-                            break;
-                        }
-                    }
+        const langData = languageData.supplemental.languageData;
+
+        const langDataReduce = function(data, obj, key){
+            if (undefined !== data[key]["_territories"]) {
+                obj[key] = data[key]["_territories"];
+            }
+            return obj;
+        };
+
+        const langDataSearch = function (searchme, findme) {
+            for (let key in searchme) {
+                const item = searchme[key];
+                var found = item.indexOf(findme);
+                if (found !== -1) {
+                    let keyAry = key.split("-");
+                    return keyAry[0];
                 }
-            });
+            }
+            return "";
         }
+
+        const supportedPrimaryLangs = Object.keys(langData)
+            .filter(key => (key.length === 2))
+            .reduce((obj, key) => langDataReduce(langData,obj,key), {});
+
+        var langCodeSearch = langDataSearch(supportedPrimaryLangs, lLocale);
+
+        if (langCodeSearch.length > 0) {
+            langCode = langCodeSearch;
+        } else {
+            const supportedSecondaryLangs = Object.keys(langData)
+                .filter(key => (key.endsWith("-alt-secondary")))
+                .reduce((obj, key) => langDataReduce(langData,obj,key), {});
+            langCodeSearch = langDataSearch(supportedSecondaryLangs, lLocale);
+            if(langCodeSearch.length > 0){langCode = langCodeSearch};
+        }
+
         return langCode + "-" + lLocale;
     }
 
     generateDayNames(glocale, gstyle) {
         let lLocale = glocale; //2 (e.g. US) or 4(en-US) char locale
-        
+
         var lStyle = gstyle; //long or short
         var dayNames = [];
         //jan 5 - 11 2020 is Sunday - Saturday
