@@ -32,10 +32,11 @@ class CalendarPrinter extends HTMLElement {
             let month = (dateParts[0] - 1);
             this.calendarDate = new Date(year, month);
         }
+        let needsRefresh = false;
         const loc = this.searchParams.get('loc');
         if (loc !== null && (loc !== this.locale)) {
             this.locale = this.localer.localeResolver(loc);
-            this.localer.refresh(this.locale, this.localeDateFormat);
+            needsRefresh = true;
         }
         const dsp = this.searchParams.get('dsp');
         if (dsp !== null && (dsp !== this.displayMode)) {
@@ -44,6 +45,9 @@ class CalendarPrinter extends HTMLElement {
         const ldf = this.searchParams.get('ldf');
         if (ldf !== null && (ldf !== this.localeDateFormat)) {
             this.localeDateFormat = ldf;
+            needsRefresh = true;
+        }
+        if(needsRefresh){
             this.localer.refresh(this.locale, this.localeDateFormat);
         }
         this.dayNames = this.localer.dayNames;
