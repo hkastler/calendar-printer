@@ -111,9 +111,8 @@ class Localer {
             }
             return "";
         }
-
         const supportedPrimaryLangs = Object.keys(langData)
-            .filter(key => (key.length === 2))
+            .filter(key => (key.length === 2 || key.length === 3))
             .reduce((obj, key) => langDataReduce(langData,obj,key), {});
 
         var langCodeSearch = langDataSearch(supportedPrimaryLangs, lLocale);
