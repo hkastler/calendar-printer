@@ -6,7 +6,7 @@ class CalendarPrinter extends HTMLElement {
     locale;
     localeDateFormat;
     localer;
-    dayNames;
+    weekdayNames;
     searchParams;
     allowedParams;
     displayMode;
@@ -19,11 +19,18 @@ class CalendarPrinter extends HTMLElement {
         this.localeDateFormat = "long";
         this.searchParams = new URLSearchParams(window.location.search);
         this.localer = new Localer(this.locale, this.localeDateFormat);
+        this.weekdayNames = [];
         this.allowedParams = ["m","loc","dsp","ldf"];
         this.displayMode = "flex"; //or table
     }
 
     connectedCallback() {
+
+        const dsp = this.searchParams.get('dsp');
+        if (dsp !== null && (dsp !== this.displayMode)) {
+            this.displayMode = dsp;
+        }
+
         const calDate = this.searchParams.get('m');
         if (calDate !== null) {
             let dateParts = calDate.split("/");
@@ -32,30 +39,27 @@ class CalendarPrinter extends HTMLElement {
             let month = (dateParts[0] - 1);
             this.calendarDate = new Date(year, month);
         }
-        let needsRefresh = false;
+        
         const loc = this.searchParams.get('loc');
         if (loc !== null && (loc !== this.locale)) {
             this.locale = this.localer.localeResolver(loc);
-            needsRefresh = true;
-        }
-        const dsp = this.searchParams.get('dsp');
-        if (dsp !== null && (dsp !== this.displayMode)) {
-            this.displayMode = dsp;
+            this.localer.locale = this.locale;
         }
         const ldf = this.searchParams.get('ldf');
         if (ldf !== null && (ldf !== this.localeDateFormat)) {
             this.localeDateFormat = ldf;
-            needsRefresh = true;
+            this.localer.localeDateFormat = this.localeDateFormat;
         }
-        if(needsRefresh){
-            this.localer.refresh(this.locale, this.localeDateFormat);
+
+        if(this.weekdayNames.length === 0){
+            this.weekdayNames = this.localer.getDayNames();
         }
-        this.dayNames = this.localer.dayNames;
         this.render();
     }
 
     render() {
         this.appendChild(this.calendarTable(this.calendarDate));
+        this.lang = this.localer.localeMapper(this.locale).get("language");
     }
 
     calendarTable(incomingDate) {
@@ -111,7 +115,7 @@ class CalendarPrinter extends HTMLElement {
         //days of week row
         tr = this.createTableElement("tr");
         tr.className += " daynames";
-        this.dayNames.forEach(dayName => {
+        this.weekdayNames.forEach(dayName => {
             let th = this.createTableElement("th");
             let text = document.createTextNode(dayName);
             th.appendChild(text);
@@ -121,16 +125,18 @@ class CalendarPrinter extends HTMLElement {
         calTable.appendChild(tHead);
         //thead closed
         
-        //find out true day of week
-        //javascript defaults to sunday=0
-        //but in many locales, monday=0 and sunday=6
-        var dayOfWeek = this.localer.localeDayOfWeek(calendarDate);
-        
         //tBody
         var tBody = this.createTableElement("tbody");
         tBody.className += " text-right";
         //open the row
         tr = this.createTableElement("tr");
+
+        //find out true day of week for the calendar start date
+        //javascript defaults to sunday=0
+        //but in many locales, monday=0 and sunday=6
+        //from dayNames we know the order
+        //find the index of the weekday in the weekdays
+        var dayOfWeek = this.calendarDayOfWeek(calendarDate);
 
         //how many non-date td to print
         //print the cells not part of the month 
@@ -179,6 +185,17 @@ class CalendarPrinter extends HTMLElement {
         return calTable;
     }
 
+    calendarDayOfWeek(calDate) {
+        var lDate = new Date(calDate).toLocaleString(this.locale, { weekday: this.localeDateFormat });
+        
+        for (let i = 0; i < this.weekdayNames.length; i++) {
+            if (this.weekdayNames[i] === lDate) {
+                return i;
+            }
+        }
+        
+    }
+
     createTableElement(tablePart){
         let elem;
         if(this.displayMode === "table"){
@@ -206,7 +223,7 @@ class CalendarPrinter extends HTMLElement {
                 value = args[0];
                 mFound = true;
             } else if (key === localeParamName){
-                value = this.localer.localeResolver(value);
+                value = this.locale;
             }
             if (this.allowedParams.indexOf(key) !== -1) {
                 newQs.set(key, value);
