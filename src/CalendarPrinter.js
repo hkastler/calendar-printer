@@ -15,12 +15,16 @@ class CalendarPrinter extends HTMLElement {
         super();
         const rightNow = new Date();
         this.calendarDate = new Date(rightNow.getFullYear(), rightNow.getMonth());
-        this.locale = this.getLang();
-        this.localeDateFormat = "long";
+        this.locale = new Intl.Locale(this.getLang());
+        this.localeDateFormat = new Map();
+        this.localeDateFormat.set("weekday", "long");
+        this.localeDateFormat.set("year", "numeric");
+        this.localeDateFormat.set("month", "long");
+        this.localeDateFormat.set("day", "numeric");
         this.searchParams = new URLSearchParams(window.location.search);
         this.localer = new Localer(this.locale, this.localeDateFormat);
         this.weekdayNames = [];
-        this.allowedParams = ["m","loc","dsp","ldf"];
+        this.allowedParams = ["m", "loc", "dsp", "ldf"];
         this.displayMode = "flex"; //or table
     }
 
@@ -39,27 +43,43 @@ class CalendarPrinter extends HTMLElement {
             let month = (dateParts[0] - 1);
             this.calendarDate = new Date(year, month);
         }
-        
+
         const loc = this.searchParams.get('loc');
         if (loc !== null && (loc !== this.locale)) {
-            this.locale = this.localer.localeResolver(loc);
-            this.localer.locale = this.locale;
+            try {
+                //test the locale provided
+                //2 letter param(lower or uppercase) is lang (iso639 1) to the constructor
+                //will not have a region
+                this.locale = new Intl.Locale(loc);
+                //3 letter languages (iso639 2) are considered valid locales
+                //will not have a region
+                //the locale resolver considers a 2 letter param to be a region
+                if (undefined === this.locale.region) {
+                    this.locale = new Intl.Locale(this.localer.localeResolver(loc));
+                }
+                this.localer.locale = this.locale;
+            } catch (err) {
+                //if the locale doesn't parse, display a message
+                let node = document.createTextNode(err.message);
+                this.appendChild(node);
+            }
         }
         const ldf = this.searchParams.get('ldf');
         if (ldf !== null && (ldf !== this.localeDateFormat)) {
-            this.localeDateFormat = ldf;
+            this.localeDateFormat.set("month", ldf);
+            this.localeDateFormat.set("weekday", ldf);
             this.localer.localeDateFormat = this.localeDateFormat;
         }
 
-        if(this.weekdayNames.length === 0){
-            this.weekdayNames = this.localer.getDayNames();
+        if (this.weekdayNames.length === 0) {
+            this.weekdayNames = this.localer.getWeekdayNames();
         }
         this.render();
     }
 
     render() {
         this.appendChild(this.calendarTable(this.calendarDate));
-        this.lang = this.localer.localeMapper(this.locale).get("language");
+        this.lang = this.locale.language;
     }
 
     calendarTable(incomingDate) {
@@ -84,7 +104,7 @@ class CalendarPrinter extends HTMLElement {
         var tr = this.createTableElement("tr");
         tr.className += " toprow";
         //previous arrow cell
-        var td = this.toprowTemplate(["td","1"]);
+        var td = this.toprowTemplate(["td", "1"]);
         td.className += " text-left"
         var previousMonth = displayCalendarMonth - 1;
         var dateLink = previousMonth + "/" + calendarYear;
@@ -93,15 +113,19 @@ class CalendarPrinter extends HTMLElement {
         tr.appendChild(td);
 
         //month and year colspan
-        td = this.toprowTemplate(["td","5"]);
-        const formatter = new Intl.DateTimeFormat(this.locale, { month: this.localeDateFormat });
-        const calendarDateMonthText = formatter.format(calendarDate);
-        const text = calendarDateMonthText + " " + calendarYear;
+        td = this.toprowTemplate(["td", "5"]);
+        const monthFormatter = new Intl.DateTimeFormat(this.locale,
+            {
+                month: this.localeDateFormat.get("month"),
+                year: this.localeDateFormat.get("year") 
+            });
+        const calendarDateMonthText = monthFormatter.format(calendarDate);
+        const text = calendarDateMonthText;
         td.appendChild(document.createTextNode(text));
         tr.appendChild(td);
 
         //next arrow cell
-        td = this.toprowTemplate(["td","1"]);
+        td = this.toprowTemplate(["td", "1"]);
         td.className += " text-right"
         var nextMonth = displayCalendarMonth + 1;
         dateLink = nextMonth + "/" + calendarYear;
@@ -117,6 +141,7 @@ class CalendarPrinter extends HTMLElement {
         tr.className += " daynames";
         this.weekdayNames.forEach(dayName => {
             let th = this.createTableElement("th");
+            th.className += " text-right";
             let text = document.createTextNode(dayName);
             th.appendChild(text);
             tr.appendChild(th);
@@ -124,7 +149,7 @@ class CalendarPrinter extends HTMLElement {
         tHead.appendChild(tr);
         calTable.appendChild(tHead);
         //thead closed
-        
+
         //tBody
         var tBody = this.createTableElement("tbody");
         tBody.className += " text-right";
@@ -156,12 +181,15 @@ class CalendarPrinter extends HTMLElement {
             }
 
             //the td(s) with the number
-            var isoDate = new Date(calendarYear, calendarMonth, dateOfMonth,0,0,0,0);
+            var isoDate = new Date(calendarYear, calendarMonth, dateOfMonth, 0, 0, 0, 0);
             td = this.tdIdTemplate([isoDate.toISOString()]);
             var span = document.createElement("span");
             span.className = "topright";
-            
-            let cellText = dateOfMonth;
+            const dayFormatter = new Intl.DateTimeFormat(this.locale, {
+                day: this.localeDateFormat.get("day")
+            });
+            const dateText = dayFormatter.format(isoDate);
+            let cellText = dateText;
             span.appendChild(document.createTextNode(cellText));
             td.appendChild(span);
 
@@ -186,19 +214,18 @@ class CalendarPrinter extends HTMLElement {
     }
 
     calendarDayOfWeek(calDate) {
-        var lDate = new Date(calDate).toLocaleString(this.locale, { weekday: this.localeDateFormat });
-        
+        var lDate = new Date(calDate)
+            .toLocaleString(this.locale, { weekday: this.localeDateFormat.get("weekday") });
         for (let i = 0; i < this.weekdayNames.length; i++) {
             if (this.weekdayNames[i] === lDate) {
                 return i;
             }
         }
-        
     }
 
-    createTableElement(tablePart){
+    createTableElement(tablePart) {
         let elem;
-        if(this.displayMode === "table"){
+        if (this.displayMode === "table") {
             elem = document.createElement(tablePart);
         } else {
             elem = document.createElement("div");
@@ -206,7 +233,6 @@ class CalendarPrinter extends HTMLElement {
         }
         return elem;
     }
-
 
     arrowTemplate(args) {
         //template = "<a id=\"arrow-{1}\" href=\"date/{0}\">{2}</a>"
@@ -218,11 +244,11 @@ class CalendarPrinter extends HTMLElement {
         var monthParamName = "m";
         var localeParamName = "loc";
         var mFound = false;
-        this.searchParams.forEach((value, key) =>{
+        this.searchParams.forEach((value, key) => {
             if (key === monthParamName) {
                 value = args[0];
                 mFound = true;
-            } else if (key === localeParamName){
+            } else if (key === localeParamName) {
                 value = this.locale;
             }
             if (this.allowedParams.indexOf(key) !== -1) {
@@ -256,14 +282,14 @@ class CalendarPrinter extends HTMLElement {
 
     //https://icons.getbootstrap.com/icons/arrow-left-circle/
     svgArrowLeftCircle() {
-         return `<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-left-circle" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        return `<svg viewBox="0 0 16 16" class="bi bi-arrow-left-circle" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 <path fill-rule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
 <path fill-rule="evenodd" d="M12 8a.5.5 0 0 1-.5.5H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5H11.5a.5.5 0 0 1 .5.5z"/>
 </svg>`;
     }
     //https://icons.getbootstrap.com/icons/arrow-right-circle/
     svgArrowRightCircle() {
-        return `<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-right-circle" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        return `<svg viewBox="0 0 16 16" class="bi bi-arrow-right-circle" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 <path fill-rule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
 <path fill-rule="evenodd" d="M4 8a.5.5 0 0 0 .5.5h5.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H4.5A.5.5 0 0 0 4 8z"/>
 </svg>`;
@@ -272,7 +298,7 @@ class CalendarPrinter extends HTMLElement {
     toprowTemplate(args) {
         //template = "<{0} colspan=\"{1}\" >";
         let elem = this.createTableElement(args[0]);
-        if(this.displayMode === "table"){
+        if (this.displayMode === "table") {
             elem.setAttribute("colspan", args[1]);
         } else {
 
@@ -287,7 +313,7 @@ class CalendarPrinter extends HTMLElement {
         return td;
     }
 
-    getLang(){
+    getLang() {
         return navigator.language || navigator.browserLanguage || (navigator.languages || ["en-US"])[0]
     }
 

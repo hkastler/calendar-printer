@@ -3,19 +3,19 @@ import languageData from 'cldr-core/supplemental/languageData.json';
 import codeMappings from 'cldr-core/supplemental/codeMappings.json';
 class Localer {
 
-    locale;//wants the js language-region format 
+    locale;//there are many formats 
     localeDateFormat;
-    
 
     constructor(locale, localeDateFormat) {
-        this.locale = locale;
-        this.localeDateFormat = localeDateFormat;
+        this.locale = new Intl.Locale(locale);
+        this.localeDateFormat = new Map(localeDateFormat);
     }
 
     localeDayOfWeek(calDate) {
-        var lDate = new Date(calDate).toLocaleString(this.locale, { weekday: this.localeDateFormat });
-        var dayOfWeek = 0;
-        var dayNames = this.getDayNames();
+        let lDate = new Date(calDate)
+            .toLocaleString(this.locale, { weekday: this.localeDateFormat.get("weekday") });
+        let dayOfWeek = 0;
+        let dayNames = this.getWeekdayNames();
         for (let i = 0; i < dayNames.length; i++) {
             if (dayNames[i] === lDate) {
                 dayOfWeek = i;
@@ -26,19 +26,19 @@ class Localer {
     }
 
     getFirstDayForLocale() {
-        var firstDayJson = weekData.supplemental.weekData.firstDay;
-        var firstDay = "sun";
-        const regionForWeekData = this.localeMapper(this.locale).get("region");
-        var loc = Object.keys(firstDayJson)
+        let regionFirstDays = weekData.supplemental.weekData.firstDay;
+        let firstDay = "sun";
+        const regionForWeekData = this.locale.region;
+        let loc = Object.keys(regionFirstDays)
             .find(key => key === regionForWeekData);
         if (loc) {
-            firstDay = firstDayJson[loc];
+            firstDay = regionFirstDays[loc];
         }
         return firstDay;
     }
 
     getLocaleFirstDayOffset() {
-        var offset;
+        let offset;
         switch (this.getFirstDayForLocale()) {
             case 'fri':
                 offset = -2;
@@ -58,10 +58,6 @@ class Localer {
         return offset;
     }
 
-    getDayNames() {
-        return this.getWeekdayNames(this.locale, this.localeDateFormat);
-    }
-
     localeResolver(localeToResolve) {
 
         let lLocale = localeToResolve;
@@ -69,16 +65,21 @@ class Localer {
         //ISO 639-2 Code length === 3
         //may not get correct order of days of week
         let isIso639_2 = lLocale.length === 3;
+        
         if (!isIso639_2) {
             lLocale = Intl.getCanonicalLocales(lLocale)[0];
         } else {
-            //3 letter locales are shortcuts to language-region
+            //3 letter locales are considered languages
+            //but are also shortcuts to language-region
             //e.g. usa = en-US, fra = fr-FR, can = en-CA, mex = es-MX, aut = de-AT
             lLocale = this.alpha3Search(lLocale);
         }
 
         //2 letter locales are treated as regions, not languages
         //regions have first days, languages do not
+        //this can be changed so that lowercase and uppercase are evaluated
+        //and return regions for a lang
+        //right now it returns one lang for a region
         if (lLocale.length === 2) {
             return this.regionLanguageSearch(lLocale);
         }
@@ -103,20 +104,9 @@ class Localer {
                     return key;
                 }
             }
-            return lLocale;
+            return lFindme;
         }
         return mappingDataSearcher(supportedAlpha3Regions, lLocale);
-    }
-
-    localeMapper(localeToMap) {
-        const lLocale = localeToMap; //2 (e.g. US) or 4(en-US) char locale
-        const lLocaleAry = lLocale.split("-");
-        let language = lLocaleAry[0].toLowerCase();
-        let region = (undefined !== lLocaleAry[1]) ? lLocaleAry[1].toUpperCase() : lLocaleAry[0].toUpperCase();
-        let localeMap = new Map();
-        localeMap.set("language", language);
-        localeMap.set("region", region);
-        return localeMap;
     }
 
     dataReducer(data, obj, key, keyName) {
@@ -176,10 +166,10 @@ class Localer {
         return Intl.getCanonicalLocales(locale)[0];
     }
 
-    getWeekdayNames(glocale, gstyle) {
-        let lLocale = glocale;
+    getWeekdayNames() {
 
-        var lStyle = gstyle; //long or short
+        let lLocale = this.locale;
+        var lStyle = this.localeDateFormat.get("weekday"); //long, short, or narrow
         var dayNames = [];
         //jan 5 - 11 2020 is Sunday - Saturday
         var startYear = 2020;
