@@ -16,7 +16,15 @@ class CalendarPrinter extends HTMLElement {
         const rightNow = new Date();
         this.calendarDate = new Date(rightNow.getFullYear(), rightNow.getMonth());
         this.locale = new Intl.Locale(this.getLang());
-        this.localeDateFormatOptions = { weekday: "long", year: "numeric", month: "long", day: "numeric", numeric: "numeric", digits:"2-digit" };
+        this.localeDateFormatOptions = { 
+            weekday: "long", // narrow' | 'short' | 'long' 
+            month: "long",  //'numeric' | '2-digit' | 'narrow' | 'short' | 'long'
+            year: "numeric", //'numeric' | '2-digit',
+            day: "numeric", //'numeric' | '2-digit',
+            numeric: "numeric",
+            digits: "2-digit",
+            narrow: "narrow"
+        };
         this.searchParams = new URLSearchParams(window.location.search);
         this.localer = new Localer(this.locale, this.localeDateFormatOptions);
         this.weekdayNames = [];
@@ -63,13 +71,17 @@ class CalendarPrinter extends HTMLElement {
         const ldf = this.searchParams.get('ldf');
         if (ldf !== null && (ldf !== this.localeDateFormatOptions)) {
             this.localeDateFormatOptions.month = ldf;
-            this.localeDateFormatOptions.weekday, ldf;
+            this.localeDateFormatOptions.weekday = ldf;
+            if(ldf === this.localeDateFormatOptions.narrow){
+                this.localeDateFormatOptions.year = this.localeDateFormatOptions.digits
+            }
             this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
         }
 
         if (this.weekdayNames.length === 0) {
             this.weekdayNames = this.localer.getWeekdayNames();
         }
+
         this.render();
     }
 
@@ -86,6 +98,7 @@ class CalendarPrinter extends HTMLElement {
         const lastDateOfCalendarDate = new Date(calendarYear, calendarMonth + 1, 0).getDate();
         const trs = "tr";
         const tds = "td";
+        const textRight = " text-right";
 
         //table
         var calTable = this.createTableElement("table");
@@ -128,7 +141,7 @@ class CalendarPrinter extends HTMLElement {
 
         //next arrow cell
         td = this.toprowTemplate({tElem: tds, colspan: "1"});
-        td.className += " text-right"
+        td.className += textRight;
         var nextMonth = new Date(calendarYear,calendarMonth+1);
         dateLink = dateLinkFormatter.format(nextMonth);
         aDateLink = this.arrowTemplate({dateLink: dateLink, arrowId: "right", dspArrow: this.svgArrowRightCircle()});
@@ -144,7 +157,7 @@ class CalendarPrinter extends HTMLElement {
         const ths = "th";
         this.weekdayNames.forEach(dayName => {
             let th = this.createTableElement(ths);
-            th.className += " text-right";
+            th.className += textRight;
             let text = document.createTextNode(dayName);
             th.appendChild(text);
             tr.appendChild(th);
@@ -155,7 +168,7 @@ class CalendarPrinter extends HTMLElement {
 
         //tBody
         var tBody = this.createTableElement("tbody");
-        tBody.className += " text-right";
+        tBody.className += textRight;
         //open the row
         tr = this.createTableElement(trs);
 
