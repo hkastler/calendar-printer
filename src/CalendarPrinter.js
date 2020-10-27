@@ -4,7 +4,7 @@ class CalendarPrinter extends HTMLElement {
 
     calendarDate;
     locale;
-    localeDateFormat;
+    localeDateFormatOptions;
     localer;
     weekdayNames;
     searchParams;
@@ -16,13 +16,9 @@ class CalendarPrinter extends HTMLElement {
         const rightNow = new Date();
         this.calendarDate = new Date(rightNow.getFullYear(), rightNow.getMonth());
         this.locale = new Intl.Locale(this.getLang());
-        this.localeDateFormat = new Map();
-        this.localeDateFormat.set("weekday", "long");
-        this.localeDateFormat.set("year", "numeric");
-        this.localeDateFormat.set("month", "long");
-        this.localeDateFormat.set("day", "numeric");
+        this.localeDateFormatOptions = { weekday: "long", year: "numeric", month: "long", day: "numeric", numeric: "numeric", digits:"2-digit" };
         this.searchParams = new URLSearchParams(window.location.search);
-        this.localer = new Localer(this.locale, this.localeDateFormat);
+        this.localer = new Localer(this.locale, this.localeDateFormatOptions);
         this.weekdayNames = [];
         this.allowedParams = ["m", "loc", "dsp", "ldf"];
         this.displayMode = "flex"; //or table
@@ -65,10 +61,10 @@ class CalendarPrinter extends HTMLElement {
             }
         }
         const ldf = this.searchParams.get('ldf');
-        if (ldf !== null && (ldf !== this.localeDateFormat)) {
-            this.localeDateFormat.set("month", ldf);
-            this.localeDateFormat.set("weekday", ldf);
-            this.localer.localeDateFormat = this.localeDateFormat;
+        if (ldf !== null && (ldf !== this.localeDateFormatOptions)) {
+            this.localeDateFormatOptions.month = ldf;
+            this.localeDateFormatOptions.weekday, ldf;
+            this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
         }
 
         if (this.weekdayNames.length === 0) {
@@ -87,8 +83,9 @@ class CalendarPrinter extends HTMLElement {
         const calendarDate = new Date(incomingDate.getFullYear(), incomingDate.getMonth(), 1);
         const calendarYear = calendarDate.getFullYear();
         const calendarMonth = calendarDate.getMonth();
-        const displayCalendarMonth = calendarMonth + 1;
         const lastDateOfCalendarDate = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+        const trs = "tr";
+        const tds = "td";
 
         //table
         var calTable = this.createTableElement("table");
@@ -101,23 +98,28 @@ class CalendarPrinter extends HTMLElement {
 
         //top row, month and nav arrows
         //part of the table head, but not table header information
-        var tr = this.createTableElement("tr");
+        var tr = this.createTableElement(trs);
         tr.className += " toprow";
         //previous arrow cell
-        var td = this.toprowTemplate(["td", "1"]);
+        var td = this.toprowTemplate({tElem: tds, colspan: "1"});
         td.className += " text-left"
-        var previousMonth = displayCalendarMonth - 1;
-        var dateLink = previousMonth + "/" + calendarYear;
-        var aDateLink = this.arrowTemplate([dateLink, "left", this.svgArrowLeftCircle()]);
+
+        const dateLinkFormatter = new Intl.DateTimeFormat("default",{
+            month: this.localeDateFormatOptions.numeric,
+            year: this.localeDateFormatOptions.numeric
+        });
+        var previousMonth = new Date(calendarYear,calendarMonth-1);
+        var dateLink = dateLinkFormatter.format(previousMonth);
+        var aDateLink = this.arrowTemplate({dateLink: dateLink, arrowId: "left", dspArrow: this.svgArrowLeftCircle()});
         td.appendChild(aDateLink);
         tr.appendChild(td);
 
         //month and year colspan
-        td = this.toprowTemplate(["td", "5"]);
+        td = this.toprowTemplate({tElem: tds, colspan: "5"});
         const monthFormatter = new Intl.DateTimeFormat(this.locale,
             {
-                month: this.localeDateFormat.get("month"),
-                year: this.localeDateFormat.get("year") 
+                month: this.localeDateFormatOptions.month,
+                year: this.localeDateFormatOptions.year 
             });
         const calendarDateMonthText = monthFormatter.format(calendarDate);
         const text = calendarDateMonthText;
@@ -125,11 +127,11 @@ class CalendarPrinter extends HTMLElement {
         tr.appendChild(td);
 
         //next arrow cell
-        td = this.toprowTemplate(["td", "1"]);
+        td = this.toprowTemplate({tElem: tds, colspan: "1"});
         td.className += " text-right"
-        var nextMonth = displayCalendarMonth + 1;
-        dateLink = nextMonth + "/" + calendarYear;
-        aDateLink = this.arrowTemplate([dateLink, "right", this.svgArrowRightCircle()]);
+        var nextMonth = new Date(calendarYear,calendarMonth+1);
+        dateLink = dateLinkFormatter.format(nextMonth);
+        aDateLink = this.arrowTemplate({dateLink: dateLink, arrowId: "right", dspArrow: this.svgArrowRightCircle()});
         td.appendChild(aDateLink);
         tr.appendChild(td);
 
@@ -137,10 +139,11 @@ class CalendarPrinter extends HTMLElement {
         //top row closed
 
         //days of week row
-        tr = this.createTableElement("tr");
+        tr = this.createTableElement(trs);
         tr.className += " daynames";
+        const ths = "th";
         this.weekdayNames.forEach(dayName => {
-            let th = this.createTableElement("th");
+            let th = this.createTableElement(ths);
             th.className += " text-right";
             let text = document.createTextNode(dayName);
             th.appendChild(text);
@@ -154,7 +157,7 @@ class CalendarPrinter extends HTMLElement {
         var tBody = this.createTableElement("tbody");
         tBody.className += " text-right";
         //open the row
-        tr = this.createTableElement("tr");
+        tr = this.createTableElement(trs);
 
         //find out true day of week for the calendar start date
         //javascript defaults to sunday=0
@@ -167,7 +170,7 @@ class CalendarPrinter extends HTMLElement {
         //print the cells not part of the month 
         //but part of the first week
         for (let i = 0; i < dayOfWeek; i++) {
-            td = this.createTableElement("td");
+            td = this.createTableElement(tds);
             tr.appendChild(td);
         }
 
@@ -177,16 +180,16 @@ class CalendarPrinter extends HTMLElement {
             if (dayOfWeek > 6) {
                 tBody.appendChild(tr);
                 dayOfWeek = 0;
-                tr = this.createTableElement("tr");
+                tr = this.createTableElement(trs);
             }
 
             //the td(s) with the number
             var isoDate = new Date(calendarYear, calendarMonth, dateOfMonth, 0, 0, 0, 0);
-            td = this.tdIdTemplate([isoDate.toISOString()]);
+            td = this.tdIdTemplate({td: tds, date: isoDate.toISOString()});
             var span = document.createElement("span");
             span.className = "topright";
             const dayFormatter = new Intl.DateTimeFormat(this.locale, {
-                day: this.localeDateFormat.get("day")
+                day: this.localeDateFormatOptions.day
             });
             const dateText = dayFormatter.format(isoDate);
             let cellText = dateText;
@@ -199,7 +202,7 @@ class CalendarPrinter extends HTMLElement {
             if (dateOfMonth == lastDateOfCalendarDate) {
                 let tdPad = 6 - dayOfWeek;
                 for (let t = 0; t < tdPad; t++) {
-                    td = this.createTableElement("td");
+                    td = this.createTableElement(tds);
                     tr.appendChild(td);
                 }
             }
@@ -215,7 +218,7 @@ class CalendarPrinter extends HTMLElement {
 
     calendarDayOfWeek(calDate) {
         var lDate = new Date(calDate)
-            .toLocaleString(this.locale, { weekday: this.localeDateFormat.get("weekday") });
+            .toLocaleString(this.locale, { weekday: this.localeDateFormatOptions.weekday });
         for (let i = 0; i < this.weekdayNames.length; i++) {
             if (this.weekdayNames[i] === lDate) {
                 return i;
@@ -238,7 +241,7 @@ class CalendarPrinter extends HTMLElement {
         //template = "<a id=\"arrow-{1}\" href=\"date/{0}\">{2}</a>"
         var a = document.createElement("a");
         a.className = "arrow";
-        a.id = "arrow-" + args[1];
+        a.id = "arrow-" + args.arrowId;
 
         var newQs = new URLSearchParams();
         var monthParamName = "m";
@@ -246,7 +249,7 @@ class CalendarPrinter extends HTMLElement {
         var mFound = false;
         this.searchParams.forEach((value, key) => {
             if (key === monthParamName) {
-                value = args[0];
+                value = args.dateLink;
                 mFound = true;
             } else if (key === localeParamName) {
                 value = this.locale;
@@ -256,11 +259,11 @@ class CalendarPrinter extends HTMLElement {
             }
         });
         if (!mFound) {
-            newQs.set(monthParamName, args[0]);
+            newQs.set(monthParamName, args.dateLink);
         }
         a.href = "?" + newQs;
 
-        let dspArrow = args[2];
+        let dspArrow = args.dspArrow;
         a.appendChild(document.createRange().createContextualFragment(dspArrow));
 
         //to get the query string/new page back
@@ -297,9 +300,9 @@ class CalendarPrinter extends HTMLElement {
 
     toprowTemplate(args) {
         //template = "<{0} colspan=\"{1}\" >";
-        let elem = this.createTableElement(args[0]);
+        let elem = this.createTableElement(args.tElem);
         if (this.displayMode === "table") {
-            elem.setAttribute("colspan", args[1]);
+            elem.setAttribute("colspan", args.colspan);
         } else {
 
         }
@@ -308,8 +311,8 @@ class CalendarPrinter extends HTMLElement {
 
     tdIdTemplate(args) {
         // template = "<td id=\"date{0}\">";
-        var td = this.createTableElement("td");
-        td.id = "date_".concat(args[0]);
+        var td = this.createTableElement(args.td);
+        td.id = "date_" + args.date;
         return td;
     }
 

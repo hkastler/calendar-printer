@@ -4,16 +4,16 @@ import codeMappings from 'cldr-core/supplemental/codeMappings.json';
 class Localer {
 
     locale;//there are many formats 
-    localeDateFormat;
+    localeDateFormatOptions;
 
-    constructor(locale, localeDateFormat) {
+    constructor(locale, localeDateFormatOptions) {
         this.locale = new Intl.Locale(locale);
-        this.localeDateFormat = new Map(localeDateFormat);
+        this.localeDateFormatOptions = localeDateFormatOptions;
     }
 
     localeDayOfWeek(calDate) {
         let lDate = new Date(calDate)
-            .toLocaleString(this.locale, { weekday: this.localeDateFormat.get("weekday") });
+            .toLocaleString(this.locale, { weekday: this.localeDateFormatOptions.weekday });
         let dayOfWeek = 0;
         let dayNames = this.getWeekdayNames();
         for (let i = 0; i < dayNames.length; i++) {
@@ -65,7 +65,7 @@ class Localer {
         //ISO 639-2 Code length === 3
         //may not get correct order of days of week
         let isIso639_2 = lLocale.length === 3;
-        
+
         if (!isIso639_2) {
             lLocale = Intl.getCanonicalLocales(lLocale)[0];
         } else {
@@ -169,7 +169,7 @@ class Localer {
     getWeekdayNames() {
 
         let lLocale = this.locale;
-        var lStyle = this.localeDateFormat.get("weekday"); //long, short, or narrow
+        var lStyle = this.localeDateFormatOptions.weekday; //long, short, or narrow
         var dayNames = [];
         //jan 5 - 11 2020 is Sunday - Saturday
         var startYear = 2020;
