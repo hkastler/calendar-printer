@@ -43,6 +43,7 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, './src/calendar.html'),
       filename: path.resolve(__dirname, 'dist/index.html'),
+      language: "en",
       title: "Calendar",
       copyrightYear: "2020"
     })

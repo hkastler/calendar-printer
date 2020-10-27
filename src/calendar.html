@@ -1,5 +1,7 @@
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"  lang="<%= htmlWebpackPlugin.options.language %>"
+ xml:lang="<%= htmlWebpackPlugin.options.language %>">
 
 <head>
     <meta charset="utf-8" />
@@ -24,9 +26,7 @@
                     <div class="panel-body">
                         <div class="panel panel-primary" id="home">
                             <main aria-label="Main content" itemscope="True" itemprop="mainEntity">
-                                <div id="main">
-                                    <calendar-printer></calendar-printer>
-                                </div>
+                                <calendar-printer></calendar-printer>
                             </main>
                         </div>
                     </div>
@@ -37,11 +37,13 @@
             <div class="col-lg-12">
                 <!-- Footer -->
                 <footer>
-                    <div class=" m-0 text-right">Copyright © <span id="copyrightYear"><%= htmlWebpackPlugin.options.copyrightYear %></span> hkstlr.com</div>
+                    <div class=" m-0 text-right">Copyright © <span
+                            id="copyrightYear"><%= htmlWebpackPlugin.options.copyrightYear %></span> hkstlr.com</div>
                     <!-- /.container -->
                 </footer>
             </div>
         </div>
     </div>
 </body>
+
 </html>
