@@ -10,30 +10,38 @@ class CalendarPrinter extends HTMLElement {
     searchParams;
     allowedParams;
     displayMode;
+    startingSize;
 
     constructor() {
         super();
         const rightNow = new Date();
         this.calendarDate = new Date(rightNow.getFullYear(), rightNow.getMonth());
         this.locale = new Intl.Locale(this.getLang());
-        this.localeDateFormatOptions = { 
+        this.localeDateFormatOptions = {
             weekday: "long", // narrow' | 'short' | 'long' 
             month: "long",  //'numeric' | '2-digit' | 'narrow' | 'short' | 'long'
             year: "numeric", //'numeric' | '2-digit',
             day: "numeric", //'numeric' | '2-digit',
             numeric: "numeric",
             digits: "2-digit",
-            narrow: "narrow"
+            long: "long",
+            narrow: "narrow",
+            short: "short"
         };
         this.searchParams = new URLSearchParams(window.location.search);
         this.localer = new Localer(this.locale, this.localeDateFormatOptions);
         this.weekdayNames = [];
         this.allowedParams = ["m", "loc", "dsp", "ldf"];
         this.displayMode = "flex"; //or table
+        try{
+            this.observeBody();
+        } catch(err){
+
+        }
+        
     }
-
-    connectedCallback() {
-
+ 
+    processParams() {
         const dsp = this.searchParams.get('dsp');
         if (dsp !== null && (dsp !== this.displayMode)) {
             this.displayMode = dsp;
@@ -72,22 +80,84 @@ class CalendarPrinter extends HTMLElement {
         if (ldf !== null && (ldf !== this.localeDateFormatOptions)) {
             this.localeDateFormatOptions.month = ldf;
             this.localeDateFormatOptions.weekday = ldf;
-            if(ldf === this.localeDateFormatOptions.narrow){
+            if (ldf === this.localeDateFormatOptions.narrow) {
                 this.localeDateFormatOptions.year = this.localeDateFormatOptions.digits
             }
             this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
         }
+    }
 
+    getWeekdayNames() {
         if (this.weekdayNames.length === 0) {
             this.weekdayNames = this.localer.getWeekdayNames();
         }
+    }
 
+    connectedCallback() {
+        this.processParams();
+        this.getWeekdayNames();
         this.render();
     }
 
+    
     render() {
         this.appendChild(this.calendarTable(this.calendarDate));
         this.lang = this.locale.language;
+    }
+
+    observeBody() {
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                if (entry) {
+                    let body = entry.target;
+                    
+                    let passedWidthThreshold = (body.clientWidth < 640);
+                    
+                    if (passedWidthThreshold) {
+                        this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.short;
+                        this.localeDateFormatOptions.month = this.localeDateFormatOptions.short;
+                    } else {
+                        this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.long;
+                        this.localeDateFormatOptions.month = this.localeDateFormatOptions.long;
+                    }
+                    
+                    this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
+                    this.processParams();
+                    this.weekdayNames = [];
+                    this.getWeekdayNames();
+                    this.innerHTML = "";
+                    this.render();
+                }
+            }
+        });
+
+        const bodyElem = document.querySelector('body');
+        resizeObserver.observe(bodyElem);
+    }
+
+
+    resizeObserver(element) {
+        const ro = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                console.log(entry);
+                if (entry.clientWidth !== this.startingSize) {
+                    if (entry.contentRect > 500) {
+                        this.weekdayNames = [];
+                        this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.short;
+                        this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
+                        this.weekdayNames = this.localer.getWeekdayNames();
+                        this.render();
+                    } else {
+                        this.weekdayNames = [];
+                        this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.long;
+                        this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
+                        this.weekdayNames = this.localer.getWeekdayNames();
+                        this.render();
+                    }
+                }
+            }
+        });
+        ro.observe(element);
     }
 
     calendarTable(incomingDate) {
@@ -113,38 +183,38 @@ class CalendarPrinter extends HTMLElement {
         var tr = this.createTableElement(trs);
         tr.className += " toprow";
         //previous arrow cell
-        var td = this.toprowTemplate({tElem: tds, colspan: "1"});
+        var td = this.toprowTemplate({ tElem: tds, colspan: "1" });
         td.className += " left"
 
-        const dateLinkFormatter = new Intl.DateTimeFormat("default",{
+        const dateLinkFormatter = new Intl.DateTimeFormat("default", {
             month: this.localeDateFormatOptions.numeric,
             year: this.localeDateFormatOptions.numeric
         });
-        var previousMonth = new Date(calendarYear,calendarMonth-1);
+        var previousMonth = new Date(calendarYear, calendarMonth - 1);
         var dateLink = dateLinkFormatter.format(previousMonth);
-        var aDateLink = this.arrowTemplate({dateLink: dateLink, arrowId: "left", dspArrow: this.svgArrowLeftCircle()});
+        var aDateLink = this.arrowTemplate({ dateLink: dateLink, arrowId: "left", dspArrow: this.svgArrowLeftCircle() });
         td.appendChild(aDateLink);
         tr.appendChild(td);
 
         //month and year colspan
-        td = this.toprowTemplate({tElem: tds, colspan: "5"});
+        td = this.toprowTemplate({ tElem: tds, colspan: "5" });
         td.className += " center";
-        const monthFormatter = new Intl.DateTimeFormat(this.locale,
-            {
-                month: this.localeDateFormatOptions.month,
-                year: this.localeDateFormatOptions.year 
-            });
+
+        const monthFormatter = new Intl.DateTimeFormat(this.locale, {
+            month: this.localeDateFormatOptions.month,
+            year: this.localeDateFormatOptions.year
+        });
         const calendarDateMonthText = monthFormatter.format(calendarDate);
         const text = calendarDateMonthText;
         td.appendChild(document.createTextNode(text));
         tr.appendChild(td);
 
         //next arrow cell
-        td = this.toprowTemplate({tElem: tds, colspan: "1"});
+        td = this.toprowTemplate({ tElem: tds, colspan: "1" });
         td.className += " right"
-        var nextMonth = new Date(calendarYear,calendarMonth+1);
+        var nextMonth = new Date(calendarYear, calendarMonth + 1);
         dateLink = dateLinkFormatter.format(nextMonth);
-        aDateLink = this.arrowTemplate({dateLink: dateLink, arrowId: "right", dspArrow: this.svgArrowRightCircle()});
+        aDateLink = this.arrowTemplate({ dateLink: dateLink, arrowId: "right", dspArrow: this.svgArrowRightCircle() });
         td.appendChild(aDateLink);
         tr.appendChild(td);
 
@@ -167,7 +237,7 @@ class CalendarPrinter extends HTMLElement {
 
         //tBody
         var tBody = this.createTableElement("tbody");
-        
+
         //open the row
         tr = this.createTableElement(trs);
 
@@ -197,7 +267,7 @@ class CalendarPrinter extends HTMLElement {
 
             //the td(s) with the number
             var isoDate = new Date(calendarYear, calendarMonth, dateOfMonth, 0, 0, 0, 0);
-            td = this.tdIdTemplate({td: tds, date: isoDate.toISOString()});
+            td = this.tdIdTemplate({ td: tds, date: isoDate.toISOString() });
             var span = document.createElement("span");
             span.className = "topright";
             const dayFormatter = new Intl.DateTimeFormat(this.locale, {
@@ -331,9 +401,9 @@ class CalendarPrinter extends HTMLElement {
     getLang() {
         return navigator.language || navigator.browserLanguage || (navigator.languages || ["en-US"])[0]
     }
-
     onLoadEnd() {
-        //console.log("onLoadEnd");
+
     }
 }
 customElements.define('calendar-printer', CalendarPrinter);
+
