@@ -98,7 +98,6 @@ class CalendarPrinter extends HTMLElement {
         const lastDateOfCalendarDate = new Date(calendarYear, calendarMonth + 1, 0).getDate();
         const trs = "tr";
         const tds = "td";
-        const textRight = " text-right";
 
         //table
         var calTable = this.createTableElement("table");
@@ -115,7 +114,7 @@ class CalendarPrinter extends HTMLElement {
         tr.className += " toprow";
         //previous arrow cell
         var td = this.toprowTemplate({tElem: tds, colspan: "1"});
-        td.className += " text-left"
+        td.className += " left"
 
         const dateLinkFormatter = new Intl.DateTimeFormat("default",{
             month: this.localeDateFormatOptions.numeric,
@@ -129,6 +128,7 @@ class CalendarPrinter extends HTMLElement {
 
         //month and year colspan
         td = this.toprowTemplate({tElem: tds, colspan: "5"});
+        td.className += " center";
         const monthFormatter = new Intl.DateTimeFormat(this.locale,
             {
                 month: this.localeDateFormatOptions.month,
@@ -141,7 +141,7 @@ class CalendarPrinter extends HTMLElement {
 
         //next arrow cell
         td = this.toprowTemplate({tElem: tds, colspan: "1"});
-        td.className += textRight;
+        td.className += " right"
         var nextMonth = new Date(calendarYear,calendarMonth+1);
         dateLink = dateLinkFormatter.format(nextMonth);
         aDateLink = this.arrowTemplate({dateLink: dateLink, arrowId: "right", dspArrow: this.svgArrowRightCircle()});
@@ -157,7 +157,6 @@ class CalendarPrinter extends HTMLElement {
         const ths = "th";
         this.weekdayNames.forEach(dayName => {
             let th = this.createTableElement(ths);
-            th.className += textRight;
             let text = document.createTextNode(dayName);
             th.appendChild(text);
             tr.appendChild(th);
@@ -168,7 +167,7 @@ class CalendarPrinter extends HTMLElement {
 
         //tBody
         var tBody = this.createTableElement("tbody");
-        tBody.className += textRight;
+        
         //open the row
         tr = this.createTableElement(trs);
 
