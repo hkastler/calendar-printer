@@ -1,13 +1,19 @@
 import weekData from 'cldr-core/supplemental/weekData.json';
 import languageData from 'cldr-core/supplemental/languageData.json';
 import codeMappings from 'cldr-core/supplemental/codeMappings.json';
+import _Locale from './_Locale';
 class Localer {
 
     locale;//there are many formats 
     localeDateFormatOptions;
 
     constructor(locale, localeDateFormatOptions) {
-        this.locale = new Intl.Locale(locale);
+        try{
+            this.locale = new Intl.Locale(locale);
+        } catch (err){
+            this.locale = new _Locale(locale.toString());
+        }
+        
         this.localeDateFormatOptions = localeDateFormatOptions;
     }
 

@@ -1,5 +1,6 @@
 import css from './calendar.css';
 import Localer from './Localer.js';
+import _Locale from './_Locale';
 class CalendarPrinter extends HTMLElement {
 
     calendarDate;
@@ -16,7 +17,12 @@ class CalendarPrinter extends HTMLElement {
         super();
         const rightNow = new Date();
         this.calendarDate = new Date(rightNow.getFullYear(), rightNow.getMonth());
-        this.locale = new Intl.Locale(this.getLang());
+        try{
+            this.locale = new Intl.Locale(this.getLang());
+        } catch(err){
+            this.locale = new _Locale(this.getLang());
+        }
+        
         this.localeDateFormatOptions = {
             weekday: "long", // narrow' | 'short' | 'long' 
             month: "long",  //'numeric' | '2-digit' | 'narrow' | 'short' | 'long'
@@ -33,11 +39,6 @@ class CalendarPrinter extends HTMLElement {
         this.weekdayNames = [];
         this.allowedParams = ["m", "loc", "dsp", "ldf"];
         this.displayMode = "flex"; //or table
-        try{
-            this.observeBody();
-        } catch(err){
-
-        }
         
     }
  
