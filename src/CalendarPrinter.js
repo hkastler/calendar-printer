@@ -7,11 +7,12 @@ class CalendarPrinter extends HTMLElement {
     locale;
     localeDateFormatOptions;
     localer;
-    weekdayNames;
+    weekdayNames = [];
     searchParams;
     allowedParams;
     displayMode;
-    startingSize;
+    observedElem;
+    obsElemSize = 0;
 
     constructor() {
         super();
@@ -24,8 +25,8 @@ class CalendarPrinter extends HTMLElement {
         }
         
         this.localeDateFormatOptions = {
-            weekday: "long", // narrow' | 'short' | 'long' 
-            month: "long",  //'numeric' | '2-digit' | 'narrow' | 'short' | 'long'
+            weekday: "short", // narrow' | 'short' | 'long' 
+            month: "short",  //'numeric' | '2-digit' | 'narrow' | 'short' | 'long'
             year: "numeric", //'numeric' | '2-digit',
             day: "numeric", //'numeric' | '2-digit',
             numeric: "numeric",
@@ -34,12 +35,20 @@ class CalendarPrinter extends HTMLElement {
             narrow: "narrow",
             short: "short"
         };
-        this.searchParams = new URLSearchParams(window.location.search);
+        
+        this.observedElem = document.querySelector('html');
+        this.obsElemSize =  this.observedElem.clientWidth;
+        if(this.obsElemSize > 640) { 
+            this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.long,
+            this.localeDateFormatOptions.month = this.localeDateFormatOptions.long
+        }
         this.localer = new Localer(this.locale, this.localeDateFormatOptions);
-        this.weekdayNames = [];
+
+        this.searchParams = new URLSearchParams(window.location.search);
         this.allowedParams = ["m", "loc", "dsp", "ldf"];
         this.displayMode = "flex"; //or table
         
+        this.observeElem();
     }
  
     processParams() {
@@ -72,6 +81,11 @@ class CalendarPrinter extends HTMLElement {
                 }
                 this.localer.locale = this.locale;
             } catch (err) {
+                this.locale = new _Locale(loc);
+                if (undefined === this.locale.region) {
+                    this.locale = new _Locale(this.localer.localeResolver(loc));
+                }
+                this.localer.locale = this.locale;
                 //if the locale doesn't parse, display a message
                 let node = document.createTextNode(err.message);
                 this.appendChild(node);
@@ -106,60 +120,39 @@ class CalendarPrinter extends HTMLElement {
         this.lang = this.locale.language;
     }
 
-    observeBody() {
+    observeElem() {
         const resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
                 if (entry) {
-                    let body = entry.target;
+                    let newElemSize = entry.target.clientWidth;
                     
-                    let passedWidthThreshold = (body.clientWidth < 640);
+                    if (undefined !== newElemSize && this.obsElemSize !== newElemSize){
+                        let passedWidthThreshold = (newElemSize < 640);
                     
-                    if (passedWidthThreshold) {
-                        this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.short;
-                        this.localeDateFormatOptions.month = this.localeDateFormatOptions.short;
-                    } else {
-                        this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.long;
-                        this.localeDateFormatOptions.month = this.localeDateFormatOptions.long;
+                        if (passedWidthThreshold) {
+                            this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.short;
+                            this.localeDateFormatOptions.month = this.localeDateFormatOptions.short;
+                        } else {
+                            this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.long;
+                            this.localeDateFormatOptions.month = this.localeDateFormatOptions.long;
+                        }
+                        
+                        this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
+                        this.processParams();
+                        this.weekdayNames = [];
+                        this.getWeekdayNames();
+                        this.innerHTML = "";
+                        this.render();
+                        //console.log(newElemSize);
+                        this.obsElemSize = newElemSize;
                     }
-                    
-                    this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
-                    this.processParams();
-                    this.weekdayNames = [];
-                    this.getWeekdayNames();
-                    this.innerHTML = "";
-                    this.render();
+                   
                 }
             }
         });
-
-        const bodyElem = document.querySelector('body');
-        resizeObserver.observe(bodyElem);
+        resizeObserver.observe(this.observedElem);
     }
 
-
-    resizeObserver(element) {
-        const ro = new ResizeObserver(entries => {
-            for (let entry of entries) {
-                console.log(entry);
-                if (entry.clientWidth !== this.startingSize) {
-                    if (entry.contentRect > 500) {
-                        this.weekdayNames = [];
-                        this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.short;
-                        this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
-                        this.weekdayNames = this.localer.getWeekdayNames();
-                        this.render();
-                    } else {
-                        this.weekdayNames = [];
-                        this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.long;
-                        this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
-                        this.weekdayNames = this.localer.getWeekdayNames();
-                        this.render();
-                    }
-                }
-            }
-        });
-        ro.observe(element);
-    }
 
     calendarTable(incomingDate) {
 
