@@ -5,12 +5,22 @@ class CalendarPrinter extends HTMLElement {
 
     calendarDate;
     locale;
-    localeDateFormatOptions;
+    localeDateFormatOptions = {
+        weekday: "short", // narrow' | 'short' | 'long' 
+        month: "short",  //'numeric' | '2-digit' | 'narrow' | 'short' | 'long'
+        year: "numeric", //'numeric' | '2-digit',
+        day: "numeric", //'numeric' | '2-digit',
+        numeric: "numeric",
+        digits: "2-digit",
+        long: "long",
+        narrow: "narrow",
+        short: "short"
+    };
     localer;
     weekdayNames = [];
     searchParams;
-    allowedParams;
-    displayMode;
+    allowedParams = ["m", "loc", "dsp", "ldf"];
+    displayMode = "flex"; //or table;
     observedElem;
     obsElemSize = 0;
 
@@ -18,39 +28,31 @@ class CalendarPrinter extends HTMLElement {
         super();
         const rightNow = new Date();
         this.calendarDate = new Date(rightNow.getFullYear(), rightNow.getMonth());
-        try{
+        try {
             this.locale = new Intl.Locale(this.getLang());
-        } catch(err){
+        } catch (err) {
             this.locale = new _Locale(this.getLang());
         }
-        
-        this.localeDateFormatOptions = {
-            weekday: "short", // narrow' | 'short' | 'long' 
-            month: "short",  //'numeric' | '2-digit' | 'narrow' | 'short' | 'long'
-            year: "numeric", //'numeric' | '2-digit',
-            day: "numeric", //'numeric' | '2-digit',
-            numeric: "numeric",
-            digits: "2-digit",
-            long: "long",
-            narrow: "narrow",
-            short: "short"
-        };
-        
+
         this.observedElem = document.querySelector('html');
-        this.obsElemSize =  this.observedElem.clientWidth;
-        if(this.obsElemSize > 640) { 
+        this.obsElemSize = this.observedElem.clientWidth;
+        if (this.obsElemSize > 640) {
             this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.long,
-            this.localeDateFormatOptions.month = this.localeDateFormatOptions.long
+                this.localeDateFormatOptions.month = this.localeDateFormatOptions.long
         }
         this.localer = new Localer(this.locale, this.localeDateFormatOptions);
 
         this.searchParams = new URLSearchParams(window.location.search);
-        this.allowedParams = ["m", "loc", "dsp", "ldf"];
-        this.displayMode = "flex"; //or table
-        
+
         this.observeElem();
     }
- 
+
+    connectedCallback() {
+        this.processParams();
+        this.getWeekdayNames();
+        this.render();
+    }
+
     processParams() {
         const dsp = this.searchParams.get('dsp');
         if (dsp !== null && (dsp !== this.displayMode)) {
@@ -68,29 +70,10 @@ class CalendarPrinter extends HTMLElement {
 
         const loc = this.searchParams.get('loc');
         if (loc !== null && (loc !== this.locale)) {
-            try {
-                //test the locale provided
-                //2 letter param(lower or uppercase) is lang (iso639 1) to the constructor
-                //will not have a region
-                this.locale = new Intl.Locale(loc);
-                //3 letter languages (iso639 2) are considered valid locales
-                //will not have a region
-                //the locale resolver considers a 2 letter param to be a region
-                if (undefined === this.locale.region) {
-                    this.locale = new Intl.Locale(this.localer.localeResolver(loc));
-                }
-                this.localer.locale = this.locale;
-            } catch (err) {
-                this.locale = new _Locale(loc);
-                if (undefined === this.locale.region) {
-                    this.locale = new _Locale(this.localer.localeResolver(loc));
-                }
-                this.localer.locale = this.locale;
-                //if the locale doesn't parse, display a message
-                let node = document.createTextNode(err.message);
-                this.appendChild(node);
-            }
+            this.localer.setLocaleFromIdentifier(loc);
+            this.locale = this.localer.locale;            
         }
+
         const ldf = this.searchParams.get('ldf');
         if (ldf !== null && (ldf !== this.localeDateFormatOptions)) {
             this.localeDateFormatOptions.month = ldf;
@@ -108,14 +91,23 @@ class CalendarPrinter extends HTMLElement {
         }
     }
 
-    connectedCallback() {
-        this.processParams();
-        this.getWeekdayNames();
-        this.render();
-    }
 
-    
     render() {
+        let localeSelect = this.availableLocalesSelect();
+        this.appendChild(localeSelect.select);
+        let langName = this.locale.language;
+        let regionName = this.locale.region;
+        let text =  "";
+        try{
+            langName = new Intl.DisplayNames([this.getLang()], { type: 'language' });
+            regionName = new Intl.DisplayNames([this.getLang()], { type: 'region' });
+            text = document.createTextNode("language: " + langName.of(this.locale.language) + " region:" + regionName.of(this.locale.region));
+        } catch(e) {
+            text =  document.createTextNode("language: " + langName + " region:" + regionName);
+        }
+        
+        
+        this.appendChild(text);
         this.appendChild(this.calendarTable(this.calendarDate));
         this.lang = this.locale.language;
     }
@@ -125,10 +117,10 @@ class CalendarPrinter extends HTMLElement {
             for (let entry of entries) {
                 if (entry) {
                     let newElemSize = entry.target.clientWidth;
-                    
-                    if (undefined !== newElemSize && this.obsElemSize !== newElemSize){
+
+                    if (undefined !== newElemSize && this.obsElemSize !== newElemSize) {
                         let passedWidthThreshold = (newElemSize < 640);
-                    
+
                         if (passedWidthThreshold) {
                             this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.short;
                             this.localeDateFormatOptions.month = this.localeDateFormatOptions.short;
@@ -136,17 +128,16 @@ class CalendarPrinter extends HTMLElement {
                             this.localeDateFormatOptions.weekday = this.localeDateFormatOptions.long;
                             this.localeDateFormatOptions.month = this.localeDateFormatOptions.long;
                         }
-                        
+
                         this.localer.localeDateFormatOptions = this.localeDateFormatOptions;
                         this.processParams();
                         this.weekdayNames = [];
                         this.getWeekdayNames();
                         this.innerHTML = "";
                         this.render();
-                        //console.log(newElemSize);
                         this.obsElemSize = newElemSize;
                     }
-                   
+
                 }
             }
         });
@@ -395,6 +386,48 @@ class CalendarPrinter extends HTMLElement {
     getLang() {
         return navigator.language || navigator.browserLanguage || (navigator.languages || ["en-US"])[0]
     }
+
+    availableLocalesSelect() {
+        const lAvailableLocales = this.localer.getAvailableLocalesFull();
+        const selectName = "availableLocales";
+
+        var label = document.createElement("label");
+        label.setAttribute("for", selectName);
+        label.innerHTML = "Available Locales:";
+
+        var select = document.createElement("select");
+        select.id = selectName;
+             
+
+        for (let i = 0; i < lAvailableLocales.length; i++) {
+            var option = document.createElement("option");
+            option.value = lAvailableLocales[i];
+            option.textContent = option.value;
+            let match1 = (option.value === this.locale.language),
+                match2 = (option.value === this.locale.baseName);
+            if (match1 || match2) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        };
+
+        select.onchange = () => {
+            this.localer.setLocaleFromIdentifier(select.value);
+            this.locale = this.localer.locale;
+            this.localer.locale = this.locale;
+            this.processParams();
+            this.weekdayNames = [];
+            this.getWeekdayNames();
+            this.innerHTML = "";
+            this.render();
+        };
+        let returnObj = {
+            label: label,
+            select: select
+        };
+        return returnObj;
+    }
+
     onLoadEnd() {
 
     }
