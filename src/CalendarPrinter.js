@@ -71,7 +71,7 @@ class CalendarPrinter extends HTMLElement {
         const loc = this.searchParams.get('loc');
         if (loc !== null && (loc !== this.locale)) {
             this.localer.setLocaleFromIdentifier(loc);
-            this.locale = this.localer.locale;            
+            this.locale = this.localer.locale;
         }
 
         const ldf = this.searchParams.get('ldf');
@@ -91,23 +91,55 @@ class CalendarPrinter extends HTMLElement {
         }
     }
 
+    displayLocaleInfo(){
+        let langName = this.locale.language;
+        let regionName = this.locale.region;
+        let LANG = "language";
+        let REGION = "region";
+        let ITEMPROP = "itemprop";
+        
+        let displayNameFormat = (lang, type, value) => {
+            try {
+                let dn = new Intl.DisplayNames([lang], { type: type });
+                return dn.of(value);
+            } catch (e) {
+                return value;
+            }
+
+        }
+        langName = displayNameFormat(this.getLang(), LANG, this.locale.language);
+        regionName = displayNameFormat(this.getLang(), REGION, this.locale.region);
+        let elem = document.createElement("div");
+        elem.id = "localeInfo";
+        let elemChild = document.createElement("div");
+        elemChild.id = LANG;       
+        elemChild.setAttribute(ITEMPROP, "availableLanguage");
+        elemChild.setAttribute("itemtype", "https://schema.org/Language");
+        elemChild.append(LANG + ": ");
+        let langSpan = document.createElement("span");
+        langSpan.setAttribute(ITEMPROP,"name");
+        langSpan.innerHTML = langName;
+        elemChild.appendChild(langSpan);
+        elem.appendChild(elemChild);
+
+        elemChild = document.createElement("div");
+        elemChild.id = REGION;
+        elemChild.setAttribute("itemtype", "https://schema.org/Country");
+        elemChild.append(REGION + ": ");
+        let regionSpan = document.createElement("span");
+        regionSpan.setAttribute(ITEMPROP,"name");
+        regionSpan.innerHTML = regionName;
+        elemChild.appendChild(regionSpan);
+        elem.appendChild(elemChild);
+        return elem;
+
+    }
 
     render() {
         let localeSelect = this.availableLocalesSelect();
         this.appendChild(localeSelect.select);
-        let langName = this.locale.language;
-        let regionName = this.locale.region;
-        let text =  "";
-        try{
-            langName = new Intl.DisplayNames([this.getLang()], { type: 'language' });
-            regionName = new Intl.DisplayNames([this.getLang()], { type: 'region' });
-            text = document.createTextNode("language: " + langName.of(this.locale.language) + " region:" + regionName.of(this.locale.region));
-        } catch(e) {
-            text =  document.createTextNode("language: " + langName + " region:" + regionName);
-        }
+        this.appendChild(this.displayLocaleInfo());
         
-        
-        this.appendChild(text);
         this.appendChild(this.calendarTable(this.calendarDate));
         this.lang = this.locale.language;
     }
@@ -151,8 +183,8 @@ class CalendarPrinter extends HTMLElement {
         const calendarYear = calendarDate.getFullYear();
         const calendarMonth = calendarDate.getMonth();
         const lastDateOfCalendarDate = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-        const trs = "tr";
-        const tds = "td";
+        const TR = "tr";
+        const TD = "td";
 
         //table
         var calTable = this.createTableElement("table");
@@ -165,10 +197,10 @@ class CalendarPrinter extends HTMLElement {
 
         //top row, month and nav arrows
         //part of the table head, but not table header information
-        var tr = this.createTableElement(trs);
+        var tr = this.createTableElement(TR);
         tr.className += " toprow";
         //previous arrow cell
-        var td = this.toprowTemplate({ tElem: tds, colspan: "1" });
+        var td = this.toprowTemplate({ tElem: TD, colspan: "1" });
         td.className += " left"
 
         const dateLinkFormatter = new Intl.DateTimeFormat("default", {
@@ -182,7 +214,7 @@ class CalendarPrinter extends HTMLElement {
         tr.appendChild(td);
 
         //month and year colspan
-        td = this.toprowTemplate({ tElem: tds, colspan: "5" });
+        td = this.toprowTemplate({ tElem: TD, colspan: "5" });
         td.className += " center";
 
         const monthFormatter = new Intl.DateTimeFormat(this.locale, {
@@ -195,7 +227,7 @@ class CalendarPrinter extends HTMLElement {
         tr.appendChild(td);
 
         //next arrow cell
-        td = this.toprowTemplate({ tElem: tds, colspan: "1" });
+        td = this.toprowTemplate({ tElem: TD, colspan: "1" });
         td.className += " right"
         var nextMonth = new Date(calendarYear, calendarMonth + 1);
         dateLink = dateLinkFormatter.format(nextMonth);
@@ -207,7 +239,7 @@ class CalendarPrinter extends HTMLElement {
         //top row closed
 
         //days of week row
-        tr = this.createTableElement(trs);
+        tr = this.createTableElement(TR);
         tr.className += " daynames";
         const ths = "th";
         this.weekdayNames.forEach(dayName => {
@@ -224,7 +256,7 @@ class CalendarPrinter extends HTMLElement {
         var tBody = this.createTableElement("tbody");
 
         //open the row
-        tr = this.createTableElement(trs);
+        tr = this.createTableElement(TR);
 
         //find out true day of week for the calendar start date
         //javascript defaults to sunday=0
@@ -237,7 +269,7 @@ class CalendarPrinter extends HTMLElement {
         //print the cells not part of the month 
         //but part of the first week
         for (let i = 0; i < dayOfWeek; i++) {
-            td = this.createTableElement(tds);
+            td = this.createTableElement(TD);
             tr.appendChild(td);
         }
 
@@ -247,12 +279,12 @@ class CalendarPrinter extends HTMLElement {
             if (dayOfWeek > 6) {
                 tBody.appendChild(tr);
                 dayOfWeek = 0;
-                tr = this.createTableElement(trs);
+                tr = this.createTableElement(TR);
             }
 
             //the td(s) with the number
             var isoDate = new Date(calendarYear, calendarMonth, dateOfMonth, 0, 0, 0, 0);
-            td = this.tdIdTemplate({ td: tds, date: isoDate.toISOString() });
+            td = this.tdIdTemplate({ td: TD, date: isoDate.toISOString() });
             var span = document.createElement("span");
             span.className = "topright";
             const dayFormatter = new Intl.DateTimeFormat(this.locale, {
@@ -269,7 +301,7 @@ class CalendarPrinter extends HTMLElement {
             if (dateOfMonth == lastDateOfCalendarDate) {
                 let tdPad = 6 - dayOfWeek;
                 for (let t = 0; t < tdPad; t++) {
-                    td = this.createTableElement(tds);
+                    td = this.createTableElement(TD);
                     tr.appendChild(td);
                 }
             }
@@ -397,7 +429,7 @@ class CalendarPrinter extends HTMLElement {
 
         var select = document.createElement("select");
         select.id = selectName;
-             
+
 
         for (let i = 0; i < lAvailableLocales.length; i++) {
             var option = document.createElement("option");

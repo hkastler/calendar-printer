@@ -1,3 +1,6 @@
+body{
+    width: 100%;
+}
 
 a.arrow:link {
     text-decoration: none;
@@ -7,7 +10,6 @@ a.arrow:visited {
     text-decoration: none;
     color: black;
 }
-
 
 thead > tr.toprow {
     border-top-color: white;
@@ -23,21 +25,20 @@ tbody > tr > td {
 .table-flex {
     display: flex;
     flex-flow: column wrap;
-    flex: 1 1 auto;
     background: transparent;
+    width: 100%;
+    min-height: 90vmax;
 }
 
 .thead-flex {
     display: flex;
-    width: 100%;
     flex-flow: row wrap;
-    font-weight: 700;
     background-color: rgba(255,255,255,0.25);
 }
 
 .bi-arrow-left-circle, .bi-arrow-right-circle {
-    height: 1.5em;
-    width: 1.5em;
+    height: 1.5rem;
+    width: 1.5rem;
 } 
 
 div.toprow {
@@ -47,38 +48,17 @@ div.toprow {
 
 div.toprow > .left{
     text-align: left;
-    flex: 1 1 0;
+    flex: 1 0 0;
 }
 
 div.toprow > .center{
     text-align: center;
-    flex: 3 1 0;
+    flex: 3 0 0;
 }
 
 div.toprow > .right{
     text-align: right;
-    flex: 1 1 0;
-}
-
-.th-flex {
-    display: flex;
-    flex-direction: column;
-    flex-wrap: wrap;
-    flex: 1 1 14.3%;
-    min-width: 0px;
-    padding: 0 0.5rem 0 0 !important;
-}
-
-.daynames { 
-    border-bottom: 2.5px solid black;
-    padding: 0.5rem 0.5rem;
-}
-
- div.tr-flex.daynames > div.th-flex { 
-    overflow: hidden;
-    text-overflow: clip;
-    white-space: nowrap;
-    text-align: right;
+    flex: 1 0 0;
 }
 
 .tr-flex {
@@ -87,14 +67,31 @@ div.toprow > .right{
     flex-direction: row;
 }
 
+ div.tr-flex.daynames > div.th-flex { 
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    flex: 7 0 0;
+    padding-top: 0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-bottom: 0.5rem;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    text-align: right;
+    border-bottom: 2.5px solid black;
+}
+
+
+
 div.tbody-flex{
     text-align: right;
 }
 
 div.tbody-flex > div.tr-flex {
-    height: 14.3vh;
+    height: 14.28vh;
 } 
-
 
 div.tbody-flex > div.tr-flex:nth-child(odd){
     background-color: rgba(207, 208, 209,0.7);
@@ -107,12 +104,20 @@ div.tbody-flex > div.tr-flex:nth-child(even) {
 .td-flex {
     display: flex;
     flex-flow: column wrap;
-    flex: 1 1 14.3%;
-    padding: 0 .5rem 0 0;
+    flex: 7 0 0;
+    padding: 0 0 0 0;
     min-width: 0px;
     border-bottom: 1px solid #d0d0d0;
 }
 
+#localeInfo{
+    display: flex;
+    flex-flow: row;
+}
+
+#localeInfo > div {
+    margin: 5px;
+}
 
 @media print {
 
@@ -126,16 +131,14 @@ div.tbody-flex > div.tr-flex:nth-child(even) {
         height: auto;
     }
 
+    .daynames { 
+        border-bottom: 2.5px solid black;
+        padding: 0 0 0 0;
+    }
+
     div.tbody-flex > div.tr-flex > div.td-flex {
-        width: auto;
         height: 124px;
         position: relative; 
-    }
-    
-    div.th-flex { 
-        width: auto;
-        position: relative; 
-        text-align: right;
     }
 
     tbody > tr > td > span {
@@ -149,10 +152,12 @@ div.tbody-flex > div.tr-flex:nth-child(even) {
         right: 0;
         top: 0;
     }
-
-   #arrow-left { display: none !important; }
-   #arrow-right { display: none !important; }
-   footer { display: none !important; }
+    #availableLocales{display: none !important; }
+    #localeInfo{display: none !important; }
+    #arrow-left { display: none !important; }
+    #arrow-right { display: none !important; }
+    footer { display: none !important; }
 
 }
+
 

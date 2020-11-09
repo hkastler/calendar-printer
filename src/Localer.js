@@ -1,6 +1,5 @@
 import weekData from 'cldr-core/supplemental/weekData.json';
 import languageData from 'cldr-core/supplemental/languageData.json';
-import codeMappings from 'cldr-core/supplemental/codeMappings.json';
 import availableLocales from 'cldr-core/availableLocales.json';
 import _Locale from './_Locale';
 class Localer {
@@ -37,12 +36,7 @@ class Localer {
         let firstDay = "sun";
         const regionFirstDays = weekData.supplemental.weekData.firstDay;
         const lRegion = this.locale.region;
-        let loc = Object.keys(regionFirstDays)
-            .find(region => region === lRegion);
-        if (loc) {
-            firstDay = regionFirstDays[loc];
-        }
-        return firstDay;
+        return (undefined !== regionFirstDays[lRegion]) ? regionFirstDays[lRegion] : firstDay;
     }
 
     getLocaleFirstDayOffset() {
@@ -66,7 +60,7 @@ class Localer {
         return offset;
     }
 
-    setLocaleFromIdentifier(localeIdentifier){
+    setLocaleFromIdentifier(localeIdentifier) {
         let lLocaleId = localeIdentifier;
         let lLocale;
         try {
@@ -77,9 +71,8 @@ class Localer {
 
             if (undefined === lLocale.region) {
                 lLocale = new Intl.Locale(this.localeRegionResolver(lLocaleId));
-                console.log(lLocale)
             }
-           
+
         } catch (err) {
             lLocale = new _Locale(localeIdentifier);
             if (undefined === lLocale.region) {
@@ -100,10 +93,11 @@ class Localer {
         (optionally) one or more variant codes, and
         (optionally) one or more extension sequences,*/
         let lLocale = localeToResolve;
+        
 
         //try to find a language-region fit 
         if (lLocale.length === 2) {
-            lLocale = this.langCodeTerritorySearcher(lLocale);
+            lLocale = this.getTerritoryForLangCode(lLocale);
         }
 
         return lLocale;
@@ -121,23 +115,33 @@ class Localer {
 
 
 
-    langCodeTerritorySearcher(langCode) {
-
+    getTerritoryForLangCode(langCode) {
+        const lLangCode = langCode; //ISO 639-1 alpha-2
         const langData = languageData.supplemental.languageData;
-        let territories = langData[langCode]._territories;
-        const defaultLangRegion = langCode.toUpperCase();
+        
+        let territories;
+        try{
+            territories = langData[lLangCode]._territories;
+        } catch(e){
 
-        let region = defaultLangRegion;
+        }
+        
+        const defaultLangRegion = lLangCode.toUpperCase(); //ISO 3166-1 alpha-2
+
+        let region = "";
         let hasDefaultRegion = false;
-        if(undefined !== territories && territories.indexOf(defaultLangRegion) !== -1){
-             hasDefaultRegion = true;
+        if (undefined !== territories) {
+            if (territories.indexOf(defaultLangRegion) !== -1) {
+                region = "-" + defaultLangRegion;
+                hasDefaultRegion = true;
+            }
+
+            if (!hasDefaultRegion) {
+                region = "-" + territories[0];
+            }
         }
         
-        if(!hasDefaultRegion){
-            region = territories[0];
-        }
-        
-       return langCode + "-" + region;
+        return langCode + region;
     }
 
     getWeekdayNames() {
